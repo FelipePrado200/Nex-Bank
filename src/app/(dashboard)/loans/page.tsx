@@ -15,7 +15,8 @@ import { api, errorMessage } from "@/lib/api";
 import { LOAN_STATUS } from "@/lib/labels";
 import { formatBRL } from "@/lib/money";
 import { EASE_OUT, fadeUp } from "@/lib/motion";
-import { type Loan, useBankStore } from "@/store/bankStore";
+import { type Account, type Loan, useBankStore } from "@/store/bankStore";
+import { useToast } from "@/components/ui/Toast";
 
 interface SimResult {
   installmentAmountCents: string;
@@ -65,7 +66,7 @@ export default function LoansPage() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [taking, setTaking] = useState(false);
   const [takeError, setTakeError] = useState("");
-  const [success, setSuccess] = useState("");
+  const toast = useToast();
 
   useEffect(() => {
     refreshAll();
@@ -85,7 +86,6 @@ export default function LoansPage() {
   async function simulate(e: React.FormEvent) {
     e.preventDefault();
     setSimError("");
-    setSuccess("");
 
     const found: typeof fieldErrors = {};
     if (BigInt(principalCents) <= 0n) found.principal = "Informe um valor maior que zero.";
@@ -114,7 +114,7 @@ export default function LoansPage() {
       await api.post("/api/loans", { accountId: accounts[0].id, ...sim.params });
       setConfirmOpen(false);
       setSim(null);
-      setSuccess("Empréstimo contratado. O valor já foi creditado na sua conta.");
+      toast.success("Empréstimo contratado", "O valor já foi creditado na sua conta.");
       await Promise.all([fetchLoans(), fetchAccounts()]);
     } catch (err) {
       setTakeError(errorMessage(err));
@@ -128,7 +128,6 @@ export default function LoansPage() {
       <PageHeader title="Empréstimos" description="Simule pela Tabela Price e contrate com parcelas fixas." />
 
       {error && <Notice kind="danger">{error}</Notice>}
-      {success && <Notice kind="success">{success}</Notice>}
 
       <div className="grid items-start gap-6 lg:grid-cols-[380px_minmax(0,1fr)]">
         <motion.section {...fadeUp(0)} aria-label="Simulador">
@@ -240,7 +239,7 @@ export default function LoansPage() {
           <ul className="flex flex-col gap-3">
             {loans.map((loan, i) => (
               <motion.li key={loan.id} {...fadeUp(i)}>
-                <LoanItem loan={loan} />
+                <LoanItem loan={loan} account={accounts[0]} onPaid={() => { fetchLoans(); fetchAccounts(); }} />
               </motion.li>
             ))}
           </ul>
@@ -362,7 +361,20 @@ function SimulationResult({
   );
 }
 
-function LoanItem({ loan }: { loan: Loan }) {
+function LoanItem({
+  loan,
+  account,
+  onPaid,
+}: {
+  loan: Loan;
+  account?: Account;
+  onPaid: () => void;
+}) {
+  const [payOpen, setPayOpen] = useState(false);
+  const [paying, setPaying] = useState(false);
+  const [payError, setPayError] = useState("");
+  const toast = useToast();
+
   const status = LOAN_STATUS[loan.status] ?? { label: loan.status, tone: "neutral" as const };
   const total = loan.installments.length || loan.termMonths;
   const paid = loan.installments.filter((i) => i.status === "PAID").length;
@@ -370,48 +382,110 @@ function LoanItem({ loan }: { loan: Loan }) {
   const next = loan.installments.find((i) => i.status !== "PAID" && i.status !== "WAIVED");
   const pct = total > 0 ? Math.round((paid / total) * 100) : 0;
 
-  return (
-    <Card className="p-5">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <p className="tnum text-lg font-semibold text-fg">{formatBRL(loan.principalAmount)}</p>
-          <p className="tnum mt-0.5 text-sm text-fg-muted">
-            {loan.termMonths}x de {formatBRL(loan.installmentAmount)}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          {overdue > 0 && <Badge tone="danger">{overdue} em atraso</Badge>}
-          <Badge tone={status.tone}>{status.label}</Badge>
-        </div>
-      </div>
+  async function payInstallment() {
+    if (!next || !account) return;
+    setPaying(true);
+    setPayError("");
+    try {
+      await api.post(`/api/loans/${loan.id}/pay`, {
+        installmentId: next.id,
+        accountId: account.id,
+      });
+      setPayOpen(false);
+      toast.success("Parcela paga", `Parcela ${next.number} de ${total} quitada.`);
+      onPaid();
+    } catch (err) {
+      setPayError(errorMessage(err));
+    } finally {
+      setPaying(false);
+    }
+  }
 
-      <div className="mt-5">
-        <div
-          className="h-1.5 overflow-hidden rounded-full bg-surface-raised"
-          role="progressbar"
-          aria-label="Parcelas pagas"
-          aria-valuemin={0}
-          aria-valuemax={total}
-          aria-valuenow={paid}
-        >
-          <motion.div
-            className="h-full rounded-full bg-success"
-            initial={{ width: 0 }}
-            animate={{ width: `${pct}%` }}
-            transition={{ duration: 0.5, ease: EASE_OUT }}
-          />
+  return (
+    <>
+      <Card className="p-5">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <p className="tnum text-lg font-semibold text-fg">{formatBRL(loan.principalAmount)}</p>
+            <p className="tnum mt-0.5 text-sm text-fg-muted">
+              {loan.termMonths}x de {formatBRL(loan.installmentAmount)}
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            {overdue > 0 && <Badge tone="danger">{overdue} em atraso</Badge>}
+            <Badge tone={status.tone}>{status.label}</Badge>
+          </div>
         </div>
-        <div className="tnum mt-2 flex flex-wrap justify-between gap-x-4 text-xs text-fg-subtle">
-          <span>
-            {paid} de {total} parcelas pagas
-          </span>
-          {next && (
+
+        <div className="mt-5">
+          <div
+            className="h-1.5 overflow-hidden rounded-full bg-surface-raised"
+            role="progressbar"
+            aria-label="Parcelas pagas"
+            aria-valuemin={0}
+            aria-valuemax={total}
+            aria-valuenow={paid}
+          >
+            <motion.div
+              className="h-full rounded-full bg-success"
+              initial={{ width: 0 }}
+              animate={{ width: `${pct}%` }}
+              transition={{ duration: 0.5, ease: EASE_OUT }}
+            />
+          </div>
+          <div className="tnum mt-2 flex flex-wrap justify-between gap-x-4 text-xs text-fg-subtle">
             <span>
-              Próxima: {dateShort(next.dueDate)} · {formatBRL(next.totalDue)}
+              {paid} de {total} parcelas pagas
             </span>
-          )}
+            {next && (
+              <span>
+                Próxima: {dateShort(next.dueDate)} · {formatBRL(next.totalDue)}
+              </span>
+            )}
+          </div>
         </div>
-      </div>
-    </Card>
+
+        {next && loan.status === "ACTIVE" && (
+          <div className="mt-4 border-t border-line pt-4">
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => { setPayError(""); setPayOpen(true); }}
+            >
+              Pagar parcela {next.number}
+            </Button>
+          </div>
+        )}
+      </Card>
+
+      <Dialog
+        open={payOpen}
+        onClose={() => !paying && setPayOpen(false)}
+        title={`Pagar parcela ${next?.number ?? ""}`}
+        description="O valor é debitado da sua conta corrente."
+      >
+        {next && (
+          <div className="flex flex-col gap-5">
+            <dl className="divide-y divide-line rounded-lg border border-line px-4">
+              <DataRow label="Parcela">{next.number} de {total}</DataRow>
+              <DataRow label="Vencimento">{dateShort(next.dueDate)}</DataRow>
+              <DataRow label="Valor">{formatBRL(next.totalDue)}</DataRow>
+              {account && <DataRow label="Sua conta">Ag. {account.agency} · {account.number}</DataRow>}
+            </dl>
+
+            {payError && <Notice kind="danger">{payError}</Notice>}
+
+            <div className="flex justify-end gap-3">
+              <Button variant="ghost" onClick={() => setPayOpen(false)} disabled={paying}>
+                Cancelar
+              </Button>
+              <Button onClick={payInstallment} loading={paying}>
+                Confirmar pagamento
+              </Button>
+            </div>
+          </div>
+        )}
+      </Dialog>
+    </>
   );
 }

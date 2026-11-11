@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
-import { Card } from "@/components/ui/Card";
+import { Card, CardTitle } from "@/components/ui/Card";
 import { Notice } from "@/components/ui/Notice";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Segmented } from "@/components/ui/Segmented";
@@ -26,6 +26,113 @@ import { DEBIT_TX_TYPES, TX_LABEL } from "@/lib/labels";
 import { formatBRL } from "@/lib/money";
 import { fadeUp } from "@/lib/motion";
 import { useBankStore } from "@/store/bankStore";
+
+// ─── Spending chart ───────────────────────────────────────────────────────────
+
+const CHART_COLORS = [
+  "#6366f1", // indigo  — transfers
+  "#8b5cf6", // violet  — card purchases
+  "#f59e0b", // amber   — store
+  "#10b981", // emerald — loan payments
+  "#14b8a6", // teal    — invoice payments
+  "#f43f5e", // rose    — fees / interest
+  "#64748b", // slate   — other
+];
+
+const TX_CATEGORY: Record<string, string> = {
+  TRANSFER_OUT: "Transferências",
+  CARD_PURCHASE: "Cartão",
+  STORE_PURCHASE: "Loja",
+  LOAN_PAYMENT: "Parcelas",
+  INVOICE_PAYMENT: "Faturas",
+  FEE: "Tarifas",
+  INTEREST_CHARGE: "Juros",
+  WITHDRAW: "Saques",
+};
+
+function SpendingChart({ items }: { items: Transaction[] }) {
+  const outflows = items.filter((tx) => DEBIT_TX_TYPES.has(tx.type) && tx.status !== "REVERSED");
+  if (outflows.length === 0) return null;
+
+  const groups = new Map<string, bigint>();
+  for (const tx of outflows) {
+    const cat = TX_CATEGORY[tx.type] ?? "Outros";
+    groups.set(cat, (groups.get(cat) ?? 0n) + BigInt(tx.amount));
+  }
+
+  const total = Array.from(groups.values()).reduce((a, b) => a + b, 0n);
+  if (total === 0n) return null;
+
+  const r = 36;
+  const circumference = 2 * Math.PI * r;
+  const GAP = 2; // gap between segments in px
+
+  const segments = Array.from(groups.entries())
+    .map(([cat, amount]) => ({ cat, amount }))
+    .sort((a, b) => Number(b.amount - a.amount));
+
+  let cumulativeOffset = 0;
+
+  return (
+    <Card className="p-6">
+      <CardTitle>Gastos por categoria</CardTitle>
+      <p className="mt-0.5 text-xs text-fg-subtle">Baseado nas {outflows.length} saídas carregadas.</p>
+      <div className="mt-5 flex flex-col items-center gap-6 sm:flex-row sm:items-start">
+        <div className="relative shrink-0">
+          <svg
+            viewBox="0 0 100 100"
+            className="size-40 -rotate-90"
+            aria-hidden
+          >
+            {segments.map((seg, i) => {
+              const fraction = Number((seg.amount * 10000n) / total) / 10000;
+              const length = Math.max(0, fraction * circumference - GAP);
+              const dashOffset = circumference - cumulativeOffset;
+              cumulativeOffset += fraction * circumference;
+              return (
+                <circle
+                  key={seg.cat}
+                  cx="50"
+                  cy="50"
+                  r={r}
+                  fill="none"
+                  stroke={CHART_COLORS[i % CHART_COLORS.length]}
+                  strokeWidth="14"
+                  strokeLinecap="round"
+                  strokeDasharray={`${length} ${circumference - length}`}
+                  strokeDashoffset={dashOffset}
+                />
+              );
+            })}
+          </svg>
+          <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+            <p className="tnum text-xs text-fg-subtle">total</p>
+            <p className="tnum text-sm font-semibold text-fg">{formatBRL(total)}</p>
+          </div>
+        </div>
+
+        <ul className="w-full flex flex-col gap-2.5">
+          {segments.map((seg, i) => {
+            const pct = Number((seg.amount * 10000n) / total) / 100;
+            return (
+              <li key={seg.cat} className="flex items-center gap-2.5">
+                <span
+                  className="size-2.5 shrink-0 rounded-full"
+                  style={{ backgroundColor: CHART_COLORS[i % CHART_COLORS.length] }}
+                />
+                <span className="flex-1 truncate text-sm text-fg-muted">{seg.cat}</span>
+                <span className="tnum text-xs text-fg-subtle">{pct.toFixed(1)}%</span>
+                <span className="tnum min-w-[80px] text-right text-sm font-medium text-fg">
+                  {formatBRL(seg.amount)}
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+    </Card>
+  );
+}
 
 interface Transaction {
   id: string;
@@ -168,6 +275,12 @@ export default function TransactionsPage() {
 
       {error && <Notice kind="danger">{error}</Notice>}
 
+      {!loading && items.length > 0 && (
+        <motion.div {...fadeUp(0)}>
+          <SpendingChart items={items} />
+        </motion.div>
+      )}
+
       {loading ? (
         <ListSkeleton />
       ) : groups.length === 0 ? (
@@ -184,7 +297,7 @@ export default function TransactionsPage() {
       ) : (
         <div className="flex flex-col gap-6">
           {groups.map(([label, txs], gi) => (
-            <motion.section key={label} {...fadeUp(gi)} aria-label={label}>
+            <motion.section key={label} {...fadeUp(gi + 1)} aria-label={label}>
               <h2 className="mb-2 px-1 text-xs font-medium capitalize text-fg-subtle">{label}</h2>
               <Card>
                 <ul className="divide-y divide-line">

@@ -1,9 +1,9 @@
 "use client";
 
-import { Suspense, lazy, useEffect, useState } from "react";
+import { Suspense, lazy, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { Check, ChevronRight, Copy, Landmark, Plus, Receipt, Store } from "lucide-react";
+import { ArrowLeftRight, Check, ChevronRight, Copy, Landmark, Plus, Receipt, Store } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card, CardTitle, DataRow } from "@/components/ui/Card";
@@ -14,6 +14,35 @@ import { Tilt } from "@/components/ui/Tilt";
 import { cn } from "@/lib/cn";
 import { formatBRL, splitBRL } from "@/lib/money";
 import { EASE_OUT, fadeUp } from "@/lib/motion";
+
+/** Animates an integer from 0 → target over `duration` ms with an ease-out cubic. */
+function useCountUp(target: bigint, duration = 1100): bigint {
+  const [value, setValue] = useState(0n);
+  const raf = useRef<number>(0);
+  const prev = useRef(0n);
+
+  useEffect(() => {
+    if (target === prev.current) return;
+    const from = prev.current;
+    prev.current = target;
+    const startTime = Date.now();
+    const diff = target - from;
+
+    function tick() {
+      const elapsed = Date.now() - startTime;
+      const t = Math.min(elapsed / duration, 1);
+      const eased = 1 - Math.pow(1 - t, 3); // ease-out cubic
+      setValue(from + BigInt(Math.round(Number(diff) * eased)));
+      if (t < 1) raf.current = requestAnimationFrame(tick);
+    }
+
+    cancelAnimationFrame(raf.current);
+    raf.current = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf.current);
+  }, [target, duration]);
+
+  return value;
+}
 import { NETWORK_LABEL } from "@/lib/labels";
 import { type Account, type Card as BankCard, useBankStore } from "@/store/bankStore";
 
@@ -131,7 +160,8 @@ function BalanceCard({ account, loaded }: { account?: Account; loaded: boolean }
   const balance = BigInt(account.balance);
   const overdraft = BigInt(account.overdraftLimit);
   const negative = balance < 0n;
-  const parts = splitBRL(balance);
+  const animated = useCountUp(balance);
+  const parts = splitBRL(animated);
   const overdraftUsed = negative ? -balance : 0n;
   const overdraftPct = overdraft > 0n ? Number((overdraftUsed * 100n) / overdraft) : 0;
 
@@ -268,10 +298,10 @@ function LimitCard({ cards, loaded }: { cards: BankCard[]; loaded: boolean }) {
 }
 
 const SHORTCUTS = [
+  { href: "/transfers", icon: ArrowLeftRight, title: "Transferir", text: "Envie dinheiro para outra conta." },
   { href: "/store", icon: Store, title: "Godoy Store", text: "Compre com o saldo ou com o cartão." },
   { href: "/loans", icon: Landmark, title: "Simular empréstimo", text: "Veja parcela e CET antes de contratar." },
   { href: "/transactions", icon: Receipt, title: "Ver extrato", text: "Todas as movimentações da conta." },
-  { href: "/cards", icon: Plus, title: "Novo cartão virtual", text: "Escolha bandeira, limite e visual." },
 ] as const;
 
 function Shortcuts() {

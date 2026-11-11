@@ -3,46 +3,126 @@
 @tailwind utilities;
 
 /*
- * Design tokens — Radix Colors (slate + indigo, dark) as the foundation.
- * Channel triplets so Tailwind can apply alpha: rgb(var(--x) / <alpha-value>).
+ * Design tokens — dark (default) and light.
+ * Channel triplets: rgb(var(--x) / <alpha-value>).
+ * Shadows are in CSS variables so both themes get correct depth.
  */
+
+/* ─── Dark theme (default) ─────────────────────────────────────────────────── */
 :root {
   color-scheme: dark;
 
-  --bg: 17 17 19;               /* slate-1  */
-  --surface: 24 25 27;          /* slate-2  */
-  --surface-raised: 33 34 37;   /* slate-3  */
-  --surface-hover: 39 42 45;    /* slate-4  */
-  --line: 46 49 53;             /* slate-5  */
-  --line-strong: 67 72 78;      /* slate-7  */
+  --bg:             17 17 19;
+  --surface:        24 25 27;
+  --surface-raised: 33 34 37;
+  --surface-hover:  39 42 45;
+  --line:           46 49 53;
+  --line-strong:    67 72 78;
 
-  --fg: 237 238 240;            /* slate-12 */
-  --fg-muted: 176 180 186;      /* slate-11 */
-  --fg-subtle: 139 143 151;
+  --fg:             237 238 240;
+  --fg-muted:       176 180 186;
+  --fg-subtle:      139 143 151;
 
-  --accent: 62 99 221;          /* indigo-9 */
-  --accent-hover: 84 114 228;   /* indigo-10 */
-  --accent-soft: 24 36 73;      /* indigo-3 */
-  --accent-text: 158 177 255;   /* indigo-11 */
+  --accent:         62 99 221;
+  --accent-hover:   84 114 228;
+  --accent-soft:    24 36 73;
+  --accent-text:    158 177 255;
 
-  --success: 48 164 108;
-  --success-soft: 19 45 33;
-  --success-text: 61 214 140;
+  --success:        48 164 108;
+  --success-soft:   19 45 33;
+  --success-text:   61 214 140;
 
-  --danger: 229 72 77;
-  --danger-soft: 59 18 25;
-  --danger-text: 255 149 146;
+  --danger:         229 72 77;
+  --danger-soft:    59 18 25;
+  --danger-text:    255 149 146;
 
-  --warning: 255 197 61;
-  --warning-soft: 43 32 8;
-  --warning-text: 255 202 22;
+  --warning:        255 197 61;
+  --warning-soft:   43 32 8;
+  --warning-text:   255 202 22;
 
   --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Depth system */
+  --shadow-card:
+    inset 0 1px 0 rgb(255 255 255 / 0.05),
+    0 1px 2px rgb(0 0 0 / 0.4),
+    0 12px 28px -14px rgb(0 0 0 / 0.6);
+  --shadow-card-hover:
+    inset 0 1px 0 rgb(255 255 255 / 0.07),
+    0 2px 4px rgb(0 0 0 / 0.4),
+    0 24px 44px -16px rgb(0 0 0 / 0.75);
+  --shadow-key:
+    inset 0 1px 0 rgb(255 255 255 / 0.06),
+    0 1px 2px rgb(0 0 0 / 0.45);
+  --shadow-key-accent:
+    inset 0 1px 0 rgb(255 255 255 / 0.24),
+    inset 0 -1px 0 rgb(0 0 0 / 0.18),
+    0 1px 2px rgb(0 0 0 / 0.5),
+    0 8px 16px -8px rgb(var(--accent) / 0.5);
+  --shadow-field:   inset 0 1px 2px rgb(0 0 0 / 0.35);
+  --shadow-pop:
+    inset 0 1px 0 rgb(255 255 255 / 0.05),
+    0 32px 80px -20px rgb(0 0 0 / 0.8);
 }
 
+/* ─── Light theme ───────────────────────────────────────────────────────────── */
+:root[data-theme="light"] {
+  color-scheme: light;
+
+  --bg:             255 255 255;
+  --surface:        248 249 250;
+  --surface-raised: 243 244 246;
+  --surface-hover:  229 231 235;
+  --line:           226 228 231;
+  --line-strong:    209 213 219;
+
+  --fg:             15 23 42;
+  --fg-muted:       71 85 105;
+  --fg-subtle:      100 116 139;
+
+  --accent:         62 99 221;
+  --accent-hover:   58 90 210;
+  --accent-soft:    238 242 255;
+  --accent-text:    55 83 196;
+
+  --success:        22 163 74;
+  --success-soft:   240 253 244;
+  --success-text:   15 118 54;
+
+  --danger:         220 38 38;
+  --danger-soft:    254 242 242;
+  --danger-text:    185 28 28;
+
+  --warning:        202 138 4;
+  --warning-soft:   254 252 232;
+  --warning-text:   161 98 7;
+
+  /* Lighter depth for white surfaces */
+  --shadow-card:
+    0 0 0 1px rgb(0 0 0 / 0.06),
+    0 1px 2px rgb(0 0 0 / 0.08),
+    0 12px 28px -14px rgb(0 0 0 / 0.1);
+  --shadow-card-hover:
+    0 0 0 1px rgb(0 0 0 / 0.08),
+    0 2px 4px rgb(0 0 0 / 0.08),
+    0 24px 44px -16px rgb(0 0 0 / 0.14);
+  --shadow-key:
+    0 0 0 1px rgb(0 0 0 / 0.06),
+    0 1px 2px rgb(0 0 0 / 0.1);
+  --shadow-key-accent:
+    inset 0 1px 0 rgb(255 255 255 / 0.9),
+    inset 0 -1px 0 rgb(0 0 0 / 0.08),
+    0 1px 2px rgb(0 0 0 / 0.12),
+    0 8px 16px -8px rgb(var(--accent) / 0.3);
+  --shadow-field:   inset 0 1px 2px rgb(0 0 0 / 0.08);
+  --shadow-pop:
+    0 0 0 1px rgb(0 0 0 / 0.06),
+    0 32px 80px -20px rgb(0 0 0 / 0.25);
+}
+
+/* ─── Base ──────────────────────────────────────────────────────────────────── */
 @layer base {
-  html,
-  body {
+  html, body {
     background: rgb(var(--bg));
     color: rgb(var(--fg));
     -webkit-font-smoothing: antialiased;
@@ -53,12 +133,11 @@
   body {
     font-feature-settings: "cv11", "ss03";
     min-height: 100dvh;
-    /* Lets the ambient light below sit between the page background and the content. */
     position: relative;
     isolation: isolate;
   }
 
-  /* Soft pool of light from above, like a studio. Fixed, so it never repaints on scroll. */
+  /* Ambient light — dark mode: indigo glow. Light mode: very subtle warm tint. */
   body::before {
     content: "";
     position: fixed;
@@ -70,8 +149,14 @@
       radial-gradient(700px 420px at 4% 108%, rgb(var(--accent) / 0.05), transparent 70%);
   }
 
+  :root[data-theme="light"] body::before {
+    background:
+      radial-gradient(900px 480px at 78% -6%, rgb(var(--accent) / 0.04), transparent 70%),
+      radial-gradient(700px 420px at 4% 108%, rgb(var(--accent) / 0.02), transparent 70%);
+  }
+
   ::selection {
-    background: rgb(var(--accent) / 0.4);
+    background: rgb(var(--accent) / 0.25);
   }
 
   :focus-visible {
@@ -96,9 +181,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
+  *, *::before, *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;

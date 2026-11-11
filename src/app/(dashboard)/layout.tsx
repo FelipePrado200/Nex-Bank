@@ -4,19 +4,22 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { CreditCard, Landmark, LayoutDashboard, Loader2, LogOut, Receipt, Store } from "lucide-react";
+import { ArrowLeftRight, CreditCard, Landmark, LayoutDashboard, Loader2, LogOut, Receipt, Store } from "lucide-react";
 import { Brand } from "@/components/ui/Brand";
+import { ThemeToggle } from "@/components/ui/ThemeToggle";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { cn } from "@/lib/cn";
 import { EASE_OUT, EASE_STANDARD } from "@/lib/motion";
 import { useBankStore } from "@/store/bankStore";
 import { useCartStore } from "@/store/cartStore";
 
 const NAV = [
-  { href: "/dashboard", label: "Início", icon: LayoutDashboard },
-  { href: "/store", label: "Loja", icon: Store },
-  { href: "/cards", label: "Cartões", icon: CreditCard },
-  { href: "/loans", label: "Empréstimos", icon: Landmark },
-  { href: "/transactions", label: "Extrato", icon: Receipt },
+  { href: "/dashboard", label: "Início", short: "Início", icon: LayoutDashboard },
+  { href: "/transfers", label: "Transferências", short: "Transf.", icon: ArrowLeftRight },
+  { href: "/store", label: "Loja", short: "Loja", icon: Store },
+  { href: "/cards", label: "Cartões", short: "Cartões", icon: CreditCard },
+  { href: "/loans", label: "Empréstimos", short: "Emprest.", icon: Landmark },
+  { href: "/transactions", label: "Extrato", short: "Extrato", icon: Receipt },
 ] as const;
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -75,6 +78,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           })}
         </nav>
 
+        <ThemeToggle />
+
         <button
           type="button"
           onClick={handleLogout}
@@ -112,7 +117,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.2, ease: EASE_OUT }}
           >
-            {children}
+            <ErrorBoundary label="A página">
+              {children}
+            </ErrorBoundary>
           </motion.div>
         </main>
       </div>
@@ -120,9 +127,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       {/* Tab bar — mobile */}
       <nav
         aria-label="Principal"
-        className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t border-line bg-bg/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden"
+        className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-6 border-t border-line bg-bg/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden"
       >
-        {NAV.map(({ href, label, icon: Icon }) => {
+        {NAV.map(({ href, short, icon: Icon }) => {
           const active = isActive(href);
           return (
             <Link
@@ -143,7 +150,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 />
               )}
               <Icon className="size-5" aria-hidden />
-              {label}
+              {short}
             </Link>
           );
         })}

@@ -35,16 +35,13 @@ const config: Config = {
         display: ["44px", { lineHeight: "48px", letterSpacing: "-0.03em" }],
       },
       borderRadius: { sm: "6px", md: "8px", lg: "12px", xl: "16px" },
-      // Depth system: a 1px light edge on top + a tight contact shadow + a wide, soft ambient shadow.
       boxShadow: {
-        card: "inset 0 1px 0 rgb(255 255 255 / 0.05), 0 1px 2px rgb(0 0 0 / 0.4), 0 12px 28px -14px rgb(0 0 0 / 0.6)",
-        "card-hover":
-          "inset 0 1px 0 rgb(255 255 255 / 0.07), 0 2px 4px rgb(0 0 0 / 0.4), 0 24px 44px -16px rgb(0 0 0 / 0.75)",
-        key: "inset 0 1px 0 rgb(255 255 255 / 0.06), 0 1px 2px rgb(0 0 0 / 0.45)",
-        "key-accent":
-          "inset 0 1px 0 rgb(255 255 255 / 0.24), inset 0 -1px 0 rgb(0 0 0 / 0.18), 0 1px 2px rgb(0 0 0 / 0.5), 0 8px 16px -8px rgb(var(--accent) / 0.5)",
-        field: "inset 0 1px 2px rgb(0 0 0 / 0.35)",
-        pop: "inset 0 1px 0 rgb(255 255 255 / 0.05), 0 32px 80px -20px rgb(0 0 0 / 0.8)",
+        card: "var(--shadow-card)",
+        "card-hover": "var(--shadow-card-hover)",
+        key: "var(--shadow-key)",
+        "key-accent": "var(--shadow-key-accent)",
+        field: "var(--shadow-field)",
+        pop: "var(--shadow-pop)",
       },
       transitionTimingFunction: {
         standard: "cubic-bezier(0.4, 0, 0.2, 1)",

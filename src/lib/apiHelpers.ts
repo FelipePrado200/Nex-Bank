@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { ZodError, type ZodSchema } from "zod";
 import { DomainError } from "./errors";
 import { rateLimit, type RateLimitOptions } from "./rateLimit";
+import { logger } from "./logger";
 
 // ─────────────────────────────────────────────
 // Standard API response shapes
@@ -178,11 +179,11 @@ export function withErrorHandler(handler: RouteHandler) {
         );
         if (isKnown) return err(error.message, 400);
 
-        console.error("[API Error]", error);
+        logger.error({ err: error }, "[API Error]");
         return err("Erro interno. Tente novamente.", 500);
       }
 
-      console.error("[Unexpected Error]", error);
+      logger.error({ err: error }, "[Unexpected Error]");
       return err("Erro interno.", 500);
     }
   };
