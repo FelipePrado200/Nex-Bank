@@ -1,0 +1,305 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  passwordHash  String
+  fullName      String
+  taxId         String   @unique
+  phone         String?
+  status        String   @default("ACTIVE")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  accounts  Account[]
+  cards     CreditCard[]
+  loans     Loan[]
+  orders    Order[]
+  auditLogs AuditLog[]
+  sessions  UserSession[]
+
+  @@index([email])
+  @@index([taxId])
+}
+
+model UserSession {
+  id           String    @id @default(cuid())
+  userId       String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jti          String    @unique
+  refreshToken String    @unique
+  userAgent    String?
+  ipAddress    String?
+  expiresAt    DateTime
+  revokedAt    DateTime?
+  createdAt    DateTime  @default(now())
+
+  @@index([userId])
+  @@index([jti])
+}
+
+model Account {
+  id             String   @id @default(cuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id])
+  type           String   @default("CHECKING")
+  number         String   @unique
+  agency         String   @default("0001")
+  balance        BigInt   @default(0)
+  overdraftLimit BigInt   @default(0)
+  overdraftRate  Float    @default(0.0082)
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  transactions Transaction[]
+  cards        CreditCard[]
+  invoices     Invoice[]
+
+  @@index([userId])
+  @@index([number])
+}
+
+model IdempotencyKey {
+  id           String   @id @default(cuid())
+  key          String   @unique
+  userId       String
+  endpoint     String
+  responseBody String
+  statusCode   Int
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+
+  @@index([key])
+  @@index([userId])
+}
+
+model Transaction {
+  id          String    @id @default(cuid())
+  accountId   String
+  account     Account   @relation(fields: [accountId], references: [id])
+  type        String
+  status      String    @default("PENDING")
+  amount      BigInt
+  balanceAfter BigInt
+  description String?
+  metadata    String?
+
+  relatedTransactionId String?
+  relatedTransaction   Transaction?  @relation("TransactionPair", fields: [relatedTransactionId], references: [id])
+  reverseOf            Transaction[] @relation("TransactionPair")
+
+  invoiceItemId     String?
+  invoiceItem       InvoiceItem?     @relation(fields: [invoiceItemId], references: [id])
+  loanInstallmentId String?
+  loanInstallment   LoanInstallment? @relation(fields: [loanInstallmentId], references: [id])
+
+  idempotencyKey String?
+  settledAt      DateTime?
+  createdAt      DateTime  @default(now())
+
+  @@index([accountId])
+  @@index([createdAt])
+  @@index([idempotencyKey])
+}
+
+model CreditCard {
+  id             String   @id @default(cuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id])
+  accountId      String
+  account        Account  @relation(fields: [accountId], references: [id])
+  type           String   @default("CREDIT")
+  network        String   @default("MASTERCARD")
+  status         String   @default("ACTIVE")
+  pan            String
+  cvv            String
+  lastFour       String
+  holderName     String
+  expiryMonth    Int
+  expiryYear     Int
+  creditLimit    BigInt
+  availableLimit BigInt
+  color          String   @default("#1a1a2e")
+  theme          String   @default("dark")
+  isVirtual      Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  invoices Invoice[]
+
+  @@index([userId])
+  @@index([accountId])
+}
+
+model Invoice {
+  id             String    @id @default(cuid())
+  cardId         String
+  card           CreditCard @relation(fields: [cardId], references: [id])
+  accountId      String
+  account        Account    @relation(fields: [accountId], references: [id])
+  status         String     @default("OPEN")
+  cycleStart     DateTime
+  cycleEnd       DateTime
+  dueDate        DateTime
+  totalAmount    BigInt     @default(0)
+  paidAmount     BigInt     @default(0)
+  minimumPayment BigInt     @default(0)
+  closedAt       DateTime?
+  paidAt         DateTime?
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  items InvoiceItem[]
+
+  @@index([cardId])
+  @@index([status])
+  @@index([dueDate])
+}
+
+model InvoiceItem {
+  id             String   @id @default(cuid())
+  invoiceId      String
+  invoice        Invoice  @relation(fields: [invoiceId], references: [id])
+  description    String
+  amount         BigInt
+  instalmentOf   Int?
+  instalmentTotal Int?
+  purchasedAt    DateTime
+  createdAt      DateTime @default(now())
+
+  transactions Transaction[]
+
+  @@index([invoiceId])
+}
+
+model Loan {
+  id               String    @id @default(cuid())
+  userId           String
+  user             User      @relation(fields: [userId], references: [id])
+  status           String    @default("SIMULATED")
+  principalAmount  BigInt
+  disbursedAmount  BigInt?
+  annualRate       Float
+  monthlyRate      Float
+  cet              Float?
+  termMonths       Int
+  installmentAmount BigInt
+  totalPayable     BigInt
+  firstDueDate     DateTime
+  disbursedAt      DateTime?
+  settledAt        DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  installments LoanInstallment[]
+
+  @@index([userId])
+  @@index([status])
+}
+
+model LoanInstallment {
+  id               String    @id @default(cuid())
+  loanId           String
+  loan             Loan      @relation(fields: [loanId], references: [id])
+  number           Int
+  status           String    @default("PENDING")
+  principalPortion BigInt
+  interestPortion  BigInt
+  totalDue         BigInt
+  lateFee          BigInt    @default(0)
+  lateInterest     BigInt    @default(0)
+  paidAmount       BigInt    @default(0)
+  dueDate          DateTime
+  paidAt           DateTime?
+  createdAt        DateTime  @default(now())
+
+  transactions Transaction[]
+
+  @@index([loanId])
+  @@index([dueDate])
+  @@index([status])
+}
+
+// ─────────────────────────────────────────────
+// Godoy Store
+// ─────────────────────────────────────────────
+
+model Product {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  name        String
+  description String
+  category    String
+  /// Key of the icon shown on the product tile (resolved on the client)
+  icon        String
+  priceCents  BigInt
+  stock       Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  orderItems OrderItem[]
+
+  @@index([category])
+  @@index([isActive])
+}
+
+model Order {
+  id             String   @id @default(cuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id])
+  accountId      String
+  /// PAID (the only state for now)
+  status         String   @default("PAID")
+  /// ACCOUNT (debit from balance) | CARD (credit card, goes to the open invoice)
+  paymentMethod  String
+  cardId         String?
+  cardLastFour   String?
+  totalCents     BigInt
+  idempotencyKey String   @unique
+  createdAt      DateTime @default(now())
+
+  items OrderItem[]
+
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model OrderItem {
+  id             String  @id @default(cuid())
+  orderId        String
+  order          Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId      String
+  product        Product @relation(fields: [productId], references: [id])
+  /// Snapshots: the order keeps what the customer saw, even if the catalog changes later
+  name           String
+  icon           String
+  unitPriceCents BigInt
+  quantity       Int
+
+  @@index([orderId])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  action     String
+  resourceId String?
+  ipAddress  String?
+  userAgent  String?
+  metadata   String?
+  createdAt  DateTime @default(now())
+
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+}

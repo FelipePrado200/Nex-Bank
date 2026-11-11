@@ -1,0 +1,15 @@
+# Ignored files for Nex-Bank project
+# Build artifacts
+.next/
+# Dependencies
+node_modules/
+# IDE settings
+.vscode/
+# Environment files (keep local)
+.env
+.env.example
+# Logs and temporary files
+npm-debug.log
+yarn-debug.log
+yarn-error.log
+.DS_Store

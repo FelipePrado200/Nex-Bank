@@ -1,0 +1,107 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * Design tokens — Radix Colors (slate + indigo, dark) as the foundation.
+ * Channel triplets so Tailwind can apply alpha: rgb(var(--x) / <alpha-value>).
+ */
+:root {
+  color-scheme: dark;
+
+  --bg: 17 17 19;               /* slate-1  */
+  --surface: 24 25 27;          /* slate-2  */
+  --surface-raised: 33 34 37;   /* slate-3  */
+  --surface-hover: 39 42 45;    /* slate-4  */
+  --line: 46 49 53;             /* slate-5  */
+  --line-strong: 67 72 78;      /* slate-7  */
+
+  --fg: 237 238 240;            /* slate-12 */
+  --fg-muted: 176 180 186;      /* slate-11 */
+  --fg-subtle: 139 143 151;
+
+  --accent: 62 99 221;          /* indigo-9 */
+  --accent-hover: 84 114 228;   /* indigo-10 */
+  --accent-soft: 24 36 73;      /* indigo-3 */
+  --accent-text: 158 177 255;   /* indigo-11 */
+
+  --success: 48 164 108;
+  --success-soft: 19 45 33;
+  --success-text: 61 214 140;
+
+  --danger: 229 72 77;
+  --danger-soft: 59 18 25;
+  --danger-text: 255 149 146;
+
+  --warning: 255 197 61;
+  --warning-soft: 43 32 8;
+  --warning-text: 255 202 22;
+
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@layer base {
+  html,
+  body {
+    background: rgb(var(--bg));
+    color: rgb(var(--fg));
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    font-feature-settings: "cv11", "ss03";
+    min-height: 100dvh;
+    /* Lets the ambient light below sit between the page background and the content. */
+    position: relative;
+    isolation: isolate;
+  }
+
+  /* Soft pool of light from above, like a studio. Fixed, so it never repaints on scroll. */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background:
+      radial-gradient(900px 480px at 78% -6%, rgb(var(--accent) / 0.1), transparent 70%),
+      radial-gradient(700px 420px at 4% 108%, rgb(var(--accent) / 0.05), transparent 70%);
+  }
+
+  ::selection {
+    background: rgb(var(--accent) / 0.4);
+  }
+
+  :focus-visible {
+    outline: 2px solid rgb(var(--accent-text));
+    outline-offset: 2px;
+  }
+
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb {
+    background: rgb(var(--line-strong));
+    border: 3px solid rgb(var(--bg));
+    border-radius: 9999px;
+  }
+}
+
+@layer utilities {
+  .tnum {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum", "cv11", "ss03";
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
