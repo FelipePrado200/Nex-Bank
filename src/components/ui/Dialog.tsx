@@ -26,10 +26,17 @@ export function Dialog({ open, onClose, title, description, size = "md", childre
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
 
+  // Always clear overflow when the component unmounts (guard against stuck overlays).
   useEffect(() => {
-    if (!open) return;
+    return () => { document.body.style.overflow = ""; };
+  }, []);
+
+  useEffect(() => {
+    if (!open) {
+      document.body.style.overflow = "";
+      return;
+    }
     const previouslyFocused = document.activeElement as HTMLElement | null;
-    const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
 
     const focusFirst = window.setTimeout(() => {
@@ -58,8 +65,11 @@ export function Dialog({ open, onClose, title, description, size = "md", childre
     return () => {
       window.clearTimeout(focusFirst);
       document.removeEventListener("keydown", onKeyDown);
-      document.body.style.overflow = previousOverflow;
-      previouslyFocused?.focus();
+      document.body.style.overflow = "";
+      // Only restore focus if the target is still in the document.
+      if (previouslyFocused && document.contains(previouslyFocused)) {
+        previouslyFocused.focus();
+      }
     };
   }, [open]);
 
@@ -69,8 +79,8 @@ export function Dialog({ open, onClose, title, description, size = "md", childre
         <motion.div
           className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 sm:items-center sm:p-6"
           initial={{ opacity: 0 }}
-          animate={{ opacity: 1, transition: { duration: 0.2, ease: EASE_OUT } }}
-          exit={{ opacity: 0, transition: { duration: 0.12, ease: EASE_IN } }}
+          animate={{ opacity: 1, pointerEvents: "auto", transition: { duration: 0.2, ease: EASE_OUT } }}
+          exit={{ opacity: 0, pointerEvents: "none", transition: { duration: 0.12, ease: EASE_IN } }}
           onMouseDown={(e) => {
             if (e.target === e.currentTarget) onClose();
           }}
