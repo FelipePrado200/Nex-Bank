@@ -1,0 +1,12 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/overdraft-interest",
+      "schedule": "5 0 * * *"
+    },
+    {
+      "path": "/api/cron/close-invoices",
+      "schedule": "10 0 * * *"
+    }
+  ]
+}

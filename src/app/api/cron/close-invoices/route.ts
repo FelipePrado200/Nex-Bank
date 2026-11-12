@@ -9,9 +9,11 @@ import { prisma } from "@/lib/prisma";
 import { InvoiceService } from "@/services/InvoiceService";
 import { LoanService } from "@/services/LoanService";
 
-export const POST = async (request: NextRequest): Promise<NextResponse> => {
-  const secret = request.headers.get("x-cron-secret");
-  if (secret !== process.env.CRON_SECRET) {
+export const GET = async (request: NextRequest): Promise<NextResponse> => {
+  // Vercel Cron sends: Authorization: Bearer <CRON_SECRET>
+  const auth = request.headers.get("authorization");
+  const secret = auth?.startsWith("Bearer ") ? auth.slice(7) : request.headers.get("x-cron-secret");
+  if (!secret || secret !== process.env.CRON_SECRET) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

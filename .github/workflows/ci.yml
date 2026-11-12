@@ -34,7 +34,7 @@ jobs:
       - name: Build
         run: npm run build
         env:
-          DATABASE_URL: file:./test.db
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/nexbank_test
           JWT_SECRET: ci-test-secret-that-is-at-least-32-chars
           ENCRYPTION_KEY: ci-test-encryption-key-32-chars!!
           NODE_ENV: production
