@@ -53,10 +53,6 @@ const CreditCard3D = lazy(() =>
 export default function DashboardPage() {
   const { accounts, cards, loaded, error, refreshAll } = useBankStore();
 
-  useEffect(() => {
-    refreshAll();
-  }, [refreshAll]);
-
   const account = accounts[0];
   const primaryCard = cards.find((c) => c.status === "ACTIVE") ?? cards[0];
 
@@ -138,6 +134,8 @@ export default function DashboardPage() {
 
 function BalanceCard({ account, loaded }: { account?: Account; loaded: boolean }) {
   const [copied, setCopied] = useState(false);
+  const balance = account ? BigInt(account.balance) : 0n;
+  const animated = useCountUp(balance);
 
   if (!loaded) {
     return (
@@ -157,10 +155,8 @@ function BalanceCard({ account, loaded }: { account?: Account; loaded: boolean }
     );
   }
 
-  const balance = BigInt(account.balance);
   const overdraft = BigInt(account.overdraftLimit);
   const negative = balance < 0n;
-  const animated = useCountUp(balance);
   const parts = splitBRL(animated);
   const overdraftUsed = negative ? -balance : 0n;
   const overdraftPct = overdraft > 0n ? Number((overdraftUsed * 100n) / overdraft) : 0;

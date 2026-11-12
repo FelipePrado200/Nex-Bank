@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { ArrowLeftRight, CreditCard, Landmark, LayoutDashboard, Loader2, LogOut, Receipt, Store } from "lucide-react";
+import { ArrowLeftRight, CreditCard, Landmark, LayoutDashboard, Loader2, LogOut, Receipt, ShieldCheck, Store } from "lucide-react";
 import { Brand } from "@/components/ui/Brand";
+import { LoadingScreen } from "@/components/ui/LoadingScreen";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { cn } from "@/lib/cn";
@@ -25,9 +26,27 @@ const NAV = [
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
+  const loaded = useBankStore((s) => s.loaded);
+  const refreshAll = useBankStore((s) => s.refreshAll);
   const reset = useBankStore((s) => s.reset);
   const clearCart = useCartStore((s) => s.clear);
   const [loggingOut, setLoggingOut] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  // Trigger initial data load from the layout so it fires on any first entry,
+  // not just when the /dashboard page mounts.
+  useEffect(() => {
+    refreshAll();
+  }, [refreshAll]);
+
+  useEffect(() => {
+    // Use plain fetch to avoid the api client's forced redirect on 401.
+    // If the user has no admin role the icon simply stays hidden.
+    fetch("/api/me", { credentials: "include" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((json) => setIsAdmin(json?.data?.role === "ADMIN"))
+      .catch(() => setIsAdmin(false));
+  }, []);
 
   async function handleLogout() {
     setLoggingOut(true);
@@ -43,6 +62,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const isActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
 
   return (
+    <>
+    <LoadingScreen show={!loaded} />
     <div className="min-h-dvh lg:grid lg:grid-cols-[240px_minmax(0,1fr)]">
       {/* Sidebar — desktop */}
       <aside className="sticky top-0 hidden h-dvh flex-col border-r border-line px-3 py-5 lg:flex">
@@ -78,6 +99,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           })}
         </nav>
 
+        {isAdmin && (
+          <Link
+            href="/admin"
+            aria-current={isActive("/admin") ? "page" : undefined}
+            className={cn(
+              "flex h-10 items-center gap-3 rounded-md px-3 text-sm font-medium",
+              "transition-colors duration-fast ease-standard",
+              isActive("/admin") ? "bg-surface-raised text-fg" : "text-fg-muted hover:bg-surface-hover hover:text-fg"
+            )}
+          >
+            <ShieldCheck className="size-[18px]" aria-hidden />
+            Administração
+          </Link>
+        )}
+
         <ThemeToggle />
 
         <button
@@ -99,6 +135,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         {/* Top bar — mobile */}
         <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-line bg-bg/90 px-4 backdrop-blur lg:hidden">
           <Brand />
+          <div className="flex items-center gap-1">
+            {isAdmin && (
+              <Link
+                href="/admin"
+                aria-label="Administração"
+                className="grid size-9 place-items-center rounded-md text-fg-muted transition-colors duration-fast ease-standard hover:bg-surface-hover hover:text-fg"
+              >
+                <ShieldCheck className="size-[18px]" aria-hidden />
+              </Link>
+            )}
           <button
             type="button"
             onClick={handleLogout}
@@ -108,6 +154,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           >
             <LogOut className="size-[18px]" aria-hidden />
           </button>
+          </div>
         </header>
 
         <main className="mx-auto w-full max-w-[1120px] flex-1 px-4 pb-28 pt-6 sm:px-6 lg:px-10 lg:pb-12 lg:pt-10">
@@ -156,5 +203,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         })}
       </nav>
     </div>
+    </>
   );
 }

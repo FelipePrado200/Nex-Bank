@@ -61,6 +61,7 @@ export const api = {
   get: <T>(path: string) => request<T>("GET", path),
   post: <T>(path: string, body?: unknown, options?: { session?: boolean }) =>
     request<T>("POST", path, body, options),
+  patch: <T>(path: string, body?: unknown) => request<T>("PATCH", path, body),
 };
 
 export function errorMessage(error: unknown, fallback = "Algo deu errado. Tente novamente."): string {

@@ -29,6 +29,9 @@ const PROTECTED_PREFIXES = [
   "/api/loans",
   "/api/invoices",
   "/api/store",
+  "/api/me",
+  "/api/admin",
+  "/admin",
 ];
 
 const PUBLIC_PREFIXES = [
@@ -114,12 +117,15 @@ function redirectOrUnauthorized(request: NextRequest, pathname: string) {
 export const config = {
   matcher: [
     "/dashboard/:path*",
+    "/admin/:path*",
     "/api/accounts/:path*",
     "/api/transfers/:path*",
     "/api/cards/:path*",
     "/api/loans/:path*",
     "/api/invoices/:path*",
     "/api/store/:path*",
+    "/api/me",
+    "/api/admin/:path*",
     "/api/auth/logout",
     "/api/auth/refresh",
   ],
