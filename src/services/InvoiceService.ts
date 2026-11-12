@@ -208,7 +208,7 @@ export class InvoiceService {
       const invoice = await tx.invoice.findUniqueOrThrow({ where: { id: invoiceId } });
       const acc = await tx.account.findUniqueOrThrow({ where: { id: accountId } });
 
-      if (!["CLOSED", "OVERDUE", "PARTIAL"].includes(invoice.status)) {
+      if (!["OPEN", "CLOSED", "OVERDUE", "PARTIAL"].includes(invoice.status)) {
         throw new Error("Esta fatura não está disponível para pagamento.");
       }
 
