@@ -4,6 +4,7 @@ import { Suspense, lazy, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { ArrowLeftRight, Check, ChevronRight, Copy, Landmark, Plus, Receipt, Store } from "lucide-react";
+import { DepositDialog } from "@/components/dashboard/DepositDialog";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card, CardTitle, DataRow } from "@/components/ui/Card";
@@ -52,6 +53,7 @@ const CreditCard3D = lazy(() =>
 
 export default function DashboardPage() {
   const { accounts, cards, loaded, error, refreshAll } = useBankStore();
+  const [showDeposit, setShowDeposit] = useState(false);
 
   const account = accounts[0];
   const primaryCard = cards.find((c) => c.status === "ACTIVE") ?? cards[0];
@@ -75,7 +77,7 @@ export default function DashboardPage() {
 
       <div className="grid gap-6 lg:grid-cols-12">
         <motion.section {...fadeUp(0)} className="lg:col-span-7" aria-label="Saldo">
-          <BalanceCard account={account} loaded={loaded} />
+          <BalanceCard account={account} loaded={loaded} onDeposit={() => setShowDeposit(true)} />
         </motion.section>
 
         <motion.section {...fadeUp(1)} className="lg:col-span-5" aria-label="Cartão principal">
@@ -128,11 +130,21 @@ export default function DashboardPage() {
           <Shortcuts />
         </motion.section>
       </div>
+
+      {account && (
+        <DepositDialog
+          open={showDeposit}
+          onClose={() => setShowDeposit(false)}
+          accountId={account.id}
+          currentBalance={BigInt(account.balance)}
+          onDeposited={() => { setShowDeposit(false); refreshAll(); }}
+        />
+      )}
     </div>
   );
 }
 
-function BalanceCard({ account, loaded }: { account?: Account; loaded: boolean }) {
+function BalanceCard({ account, loaded, onDeposit }: { account?: Account; loaded: boolean; onDeposit: () => void }) {
   const [copied, setCopied] = useState(false);
   const balance = account ? BigInt(account.balance) : 0n;
   const animated = useCountUp(balance);
@@ -176,7 +188,17 @@ function BalanceCard({ account, loaded }: { account?: Account; loaded: boolean }
     <Card className="flex h-full flex-col p-6">
       <div className="flex items-center justify-between gap-3">
         <p className="text-sm text-fg-muted">Saldo disponível</p>
-        {negative && <Badge tone="warning">Cheque especial em uso</Badge>}
+        <div className="flex items-center gap-2">
+          {negative && <Badge tone="warning">Cheque especial em uso</Badge>}
+          <button
+            type="button"
+            onClick={onDeposit}
+            className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-fg-muted ring-1 ring-line transition-colors duration-fast ease-standard hover:bg-surface-hover hover:text-fg"
+          >
+            <Plus className="size-3" aria-hidden />
+            Depositar
+          </button>
+        </div>
       </div>
 
       <p

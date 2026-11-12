@@ -173,6 +173,7 @@ export function withErrorHandler(handler: RouteHandler) {
           "Esta parcela",
           "O prazo",
           "O valor",
+          "O depósito",
         ];
         const isKnown = knownErrors.some((prefix) =>
           error.message.startsWith(prefix)
